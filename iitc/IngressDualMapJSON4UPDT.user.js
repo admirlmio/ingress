@@ -11,7 +11,8 @@
 // @match          http://www.ingress.com/intel*
 // @grant          none
 // ==/UserScript==
-// {"key":"iitc-plugin-ingressdualmap-exporter-json-updt","value":{"upload":"https://nayuki.homeip.net/~nayuki/cgi-bin/dput.cgi","headers":{"x-filename":"ktnr_"}}}
+//// {"key":"iitc-plugin-ingressdualmap-exporter-json-updt","value":{"upload":"https://nayuki.homeip.net/~nayuki/cgi-bin/dput.cgi","headers":{"x-filename":"ktnr_"}}}
+// {"key":"iitc-plugin-ingressdualmap-exporter-json-updt","value":{"upload":"ktnr_"}}
 function wrapperJSON() {
     // in case IITC is not available yet, define the base plugin object
     if (typeof window.plugin !== "function") {
@@ -55,16 +56,14 @@ function wrapperJSON() {
         $("#toolbox").append(link);
         window.addHook('mapDataRefreshEnd', function() { setTimeout(function(){
             var value = localStorage['iitc-plugin-ingressdualmap-exporter-json-updt'];
-            var url = "https://nayuki.homeip.net/~nayuki/cgi-bin/dput.cgi"; // default
+            var url = "https://nayuki.homeip.net/~ingress/cgi-bin/dput.cgi"; // default and emag
             var xhr = new XMLHttpRequest();
-            if(!value) {
-                console.log("UPDT: configuration and values are not found.");
-            } else {
-                url = value.upload || url;
-            }
 
+            console.log("valuE"+value);
             xhr.open("POST" , url, true);
-            if (value && value.headers){
+            if (value){
+                xhr.setRequestHeader("x-filename", value+Date.now()+".json");
+/*
                 for (key in value.headers){
                     if (key == "x-filename"){
                         xhr.setRequestHeader(key, value.headers[key]+Date.now()+".json");
@@ -72,6 +71,7 @@ function wrapperJSON() {
                         xhr.setRequestHeader(key, value.headers[key]);
                     }
                 }
+*/
             }
             xhr.onreadystatechange = function (){
 

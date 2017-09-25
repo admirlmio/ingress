@@ -3,7 +3,7 @@
 // @name           IITC plugin: Chiakeshi-1gou
 // @category       Info
 // @author         kuzira245
-// @version        1.0.0.2
+// @version        1.1.1.2
 // @namespace      http://nayuki.homeip.net:81/~nayuki/
 // @description    Send portal detailes to server.
 // @include        https://www.ingress.com/intel*
@@ -66,6 +66,14 @@ function wrapperPD() {
             m ="TU";
             r = "";
         }
+        if (mod.name == "Ito En Transmuter (+)"){
+            m = "ITOEN(+)";
+            r = "";
+        }
+        if (mod.name == "Ito En Transmuter (-)"){
+            m = "ITOEN(-)";
+            r = "";
+        }
         var text = r+m;
         if (simple){
             return text;
@@ -73,9 +81,32 @@ function wrapperPD() {
             return '<span style="color:'+color+';background-color:#886A08;">'+text+'</span>';
         } else if (text == "VRHS" || text == "VRMH"){
             return '<span style="color:'+color+';background-color:yellow;">'+text+'</span>';
+        } else if (text == "ITOEN(+)" || text == "ITOEN(-)"){
+            return '<span style="color:'+color+';background-color:yellow;">'+text+'</span>';
         } else {
             return '<span style="color:'+color+';">'+text+'</span>';
         }
+    }
+
+    function json4Import(b){
+        var date = new Date();
+        var polyMap = {
+            "Polygons": [
+                {
+                    "description": date.toISOString(),
+                    "type": "groupa",
+                    "latlngs": [
+                        b._southWest,
+                        {"lat":b._southWest.lat, "lng":b._northEast.lng},
+                        b._northEast,
+                        {"lat":b._northEast.lat, "lng":b._southWest.lng},
+                        b._southWest
+                    ],
+                    "color": "blue"
+                }
+            ]
+        };
+        return JSON.stringify(polyMap);
     }
 
     function getFactionColor(team){
@@ -205,27 +236,46 @@ function wrapperPD() {
         return tsv;
     }
 
-    function download(content, mimeType, extention){
-        var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-        var blob = new Blob([ bom, content ], { "type" : mimeType });
-        var a = document.createElement('a');
-        a.download = "export."+extention;
-        a.target   = '_blank';
-        if (window.URL && window.URL.createObjectURL) {
-            // for Firefox
-            a.href = window.URL.createObjectURL(blob);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } else if (window.webkitURL && window.webkitURL.createObject) {
-            // for Chrome
-            a.href = window.webkitURL.createObjectURL(blob);
-            a.click();
-        } else {
-            alert("未実装の機能です.");
-        }
-    }
-
+   function download(content, mimeType, extention){
+       var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+       var blob = new Blob([ bom, content ], { "type" : mimeType });
+       var a = document.createElement('a');
+       // file nameにdateを足す
+       var date = new Date () ;
+       var year = date.getFullYear() ;
+       var month = date.getMonth() + 1 ;
+       var day = date.getDate() ;
+       var hour = date.getHours() ;
+       var minute = date.getMinutes() ;
+       if (month < 10) {
+           month  = '0' + month ;
+       }
+       if (day < 10) {
+           day = '0' + day ;
+       }
+       if (hour < 10) {
+           hour   = '0' + hour ;
+       }
+       if (minute < 10) {
+           minute = '0' + minute ;
+       }
+       a.download = "PD_"+year+month+day+"_"+hour+minute+"."+extention;
+       a.target   = '_blank';
+       if (window.URL && window.URL.createObjectURL) {
+           // for Firefox
+           a.href = window.URL.createObjectURL(blob);
+           document.body.appendChild(a);
+           a.click();
+           document.body.removeChild(a);
+       } else if (window.webkitURL && window.webkitURL.createObject) {
+           // for Chrome
+           a.href = window.webkitURL.createObjectURL(blob);
+           a.click();
+       } else {
+           alert("未実装の機能です.");
+       }
+   }
+    
     // base context for plugin
     window.plugin.ingresspd = function() {};
     var self = window.plugin.ingresspd;
@@ -233,6 +283,7 @@ function wrapperPD() {
     self.guids = [];
     self.index = 0;
     self.details = [];
+    self.enlOnly = false;
     self.toggle =  function (){
         if (window.plugin.ingresspd.executing){
             // stop
@@ -266,7 +317,7 @@ function wrapperPD() {
     };
 
     self.export.tsvString =  function (){
-        var tsv = "#team\tlv\tname\tmod1\tmod2\tmod3\tmod4\tresos\towner\tlatlng\tguid\tURL\tparty(s)\n";
+        var tsv = "#team\tlv\tname\tmod1\tmod2\tmod3\tmod4\tresos\towner\tlatlng\tguid\tURL\tparty(s)\t"+json4Import(window.map.getBounds())+"\n";
         for (var i in window.plugin.ingresspd.details){
             tsv += getSimpleTSV(window.plugin.ingresspd.details[i])+"\n";
         }
@@ -301,7 +352,11 @@ function wrapperPD() {
             // skip if not currently visible
             if (p._latlng.lat < b._southWest.lat || p._latlng.lng < b._southWest.lng
                 || p._latlng.lat > b._northEast.lat || p._latlng.lng > b._northEast.lng) continue;
-            self.guids.push(guid);
+            if (self.enlOnly && p.options.data.team != "E"){
+                continue;
+            }else{
+                self.guids.push(guid);
+            }
         }
         $("#idmPDCheckNums").text((self.index)+"/"+self.guids.length);
         $("#idmPDCheck li").remove();
@@ -312,10 +367,13 @@ function wrapperPD() {
         if (self.executing){
             return;
         }
+        self.enlOnly = confirm("Pickup ENL portals only?\nIf you push cancel puck up all portals. ");
+        var mode = "ALL";
+        if (self.enlOnly){ mode = "ENL Only"; }
         self.executing = true;
         var dialog = window.dialog({
             title: "Ingress Portal checker",
-            html: '<span>画面に表示されているポータルを調べます</span><span id="idmPDCheckNums"/><br/>'
+            html: '<span>画面に表示されているポータルを調べます</span> ['+mode+'] <span id="idmPDCheckNums"/><br/>'
             +'<button type="button" id="idmPDCheckButton" onclick="window.plugin.ingresspd.toggle();" style="width: 40%;">STOP</button>'
             +'<button type="button" onclick="window.plugin.ingresspd.export.json();" style="width: 10%;">JSON</button>'
             +'<button type="button" onclick="window.plugin.ingresspd.export.tsv();" style="width: 10%;">TSV</button>'

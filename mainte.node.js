@@ -1,6 +1,42 @@
 
 "use strict;";
 
+var version = "c2-B-e"; // Chiakeshi 2gou - B part - revision
+
+function formatDate(date, format) {
+  if (!format) format = 'YYYY-MM-DD hh:mm:ss.SSS';
+  format = format.replace(/YYYY/g, date.getFullYear());
+  format = format.replace(/MM/g, ('0' + (date.getMonth() + 1)).slice(-2));
+  format = format.replace(/DD/g, ('0' + date.getDate()).slice(-2));
+  format = format.replace(/hh/g, ('0' + date.getHours()).slice(-2));
+  format = format.replace(/mm/g, ('0' + date.getMinutes()).slice(-2));
+  format = format.replace(/ss/g, ('0' + date.getSeconds()).slice(-2));
+  if (format.match(/S/g)) {
+    var milliSeconds = ('00' + date.getMilliseconds()).slice(-3);
+    var length = format.match(/S/g).length;
+    for (var i = 0; i < length; i++) format = format.replace(/S/, milliSeconds.substring(i, i + 1));
+  }
+  return format;
+};
+
+function basename (path, suffix) {
+	// Returns the filename component of the path  
+	// 
+	// version: 910.820
+	// discuss at: http://phpjs.org/functions/basename	// +   original by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+	// +   improved by: Ash Searle (http://hexmen.com/blog/)
+	// +   improved by: Lincoln Ramsay
+	// +   improved by: djmix
+	// *	 example 1: basename('/www/site/home.htm', '.htm');	// *	 returns 1: 'home'
+	// *	 example 2: basename('ecra.php?p=1');
+	// *	 returns 2: 'ecra.php?p=1'
+	var b = path.replace(/^.*[\/\\]/g, '');
+		if (typeof(suffix) == 'string' && b.substr(b.length-suffix.length) == suffix) {
+		b = b.substr(0, b.length-suffix.length);
+	}
+	return b;
+}
+
 function l(hash){
   return Object.keys(hash).length;
 }
@@ -75,8 +111,9 @@ function m() {
 
 function createResultString(masters, currentResult,currentPortals,lastResult,lastPortals){
   var change = false;
-  var resultStr = "Time: " + new Date().toLocaleString('ja-JP')+ "\n" + 
-    "File: "+process.argv[3]+"\n"+
+  // var resultStr = "Time: " + new Date().toLocaleString('ja-JP')+ "\n" + 
+  var resultStr = "Time: " + formatDate(new Date(),"YYYY-MM-DD hh:mm:ss")+ "\n" + 
+    "File: "+basename(process.argv[3],"")+" ["+version+"]\n"+
     "P8 RES " + l(currentResult.resP8) +" : " + l(currentResult.enlP8) +" ENL\n"+
     "P7 RES " + l(currentResult.resP7) +" : " + l(currentResult.enlP7) +" ENL\n"+
     "P6-1 RES " + l(currentResult.resP6u) +" : " + l(currentResult.enlP6u) +" ENL\n";
